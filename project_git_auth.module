@@ -40,7 +40,7 @@ function project_git_auth_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
 
         // Register Pheanstalk class loader
         require_once(drupal_get_path('module', 'beanstalkd') . '/pheanstalk/pheanstalk_init.php');
-        drupal_set_message(t('Your git repository has been queued for creation and should be available soon!'));
+        drupal_set_message(t('Your git repository has been queued for creation and should be available almost immediately.'));
 
         // TODO: if we were actually going to use this we'd need to make beanstalksd's location configurable.
         $pheanstalk = new Pheanstalk('127.0.0.1', 11300);
