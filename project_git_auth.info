@@ -1,0 +1,7 @@
+; $Id$
+name = Project Git Repository Manager
+description = A module that interfaces with the Python daemons to create, delete, and control access to git repositories for project module projects.
+core = 6.x
+package = versioncontrol
+dependencies[] = project
+dependencies[] = sshkey

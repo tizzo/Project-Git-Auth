@@ -1,0 +1,95 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ *   Creates repositories and grants access for projects.
+ */
+
+/**
+ * Implementation of hook_menu().
+ */
+function project_git_auth_menu() {
+  $items = array();
+  $items['project-git-auth'] = array(
+    'page title' => 'Git Authentication Service',
+    'page callback' => 'project_git_auth_service',
+    'access arguments' => array('view projects of maintainer'),
+  );
+  return $items;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function project_git_auth_perm() {
+  return array(
+    'create ssh keys',
+    'view projects of maintainer',
+  );
+}
+
+/**
+ * Implementation of hook_nodeapi(
+ */
+function project_git_auth_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+  if (isset($node->type) && $node->type == 'project_project' && module_exists('beanstalkd')) {
+    switch ($op) {
+      case 'insert':
+      case 'delete':
+
+        // Register Pheanstalk class loader
+        require_once(drupal_get_path('module', 'beanstalkd') . '/pheanstalk/pheanstalk_init.php');
+        drupal_set_message(t('Your git repository has been queued for creation and should be available soon!'));
+
+        // TODO: if we were actually going to use this we'd need to make beanstalksd's location configurable.
+        $pheanstalk = new Pheanstalk('127.0.0.1', 11300);
+
+        // Create the job for our python daemon.
+        $data = array(
+          'project' => $node->project['uri'],
+        );
+        if ($op == 'insert') {
+          $data['operation'] = 'create';
+        }
+        elseif ($op == 'delete') {
+          $data['operation'] = 'delete';
+        }
+        $pheanstalk
+          ->put(json_encode($data));
+        break;
+
+    } 
+  }
+}
+
+/** 
+ * The menu callback for the authenticator service.
+ */
+function project_git_auth_service() {
+  module_load_include('inc', 'sshkey');
+  if ($_GET['fingerprint']) {
+    $fingerprint = urldecode($_GET['fingerprint']);
+    watchdog('vcgit', $fingerprint);
+    try {
+      $fingerprint = str_replace(':', '', $fingerprint);
+      $loaded_key = sshkey_public_key_load($fingerprint);
+      $uid = $loaded_key['uid'];
+      $sql = "SELECT uri FROM project_projects pp
+              JOIN project_maintainer pm ON pp.nid = pm.nid
+              WHERE pm.uid=%d";
+      $result = db_query($sql, $uid);
+      $repositories = array();
+      while ($project = db_result($result)) {
+        $repositories[] = $project;
+      }
+    }
+    catch(Exception $e) {
+      $repositories = array();
+      $uid = 0;
+    }
+    drupal_alter('project_git_auth_user_repositories', $repositories, $uid);
+    drupal_json($repositories);
+    return NULL;
+  }
+} 
