@@ -2,6 +2,8 @@
 
 This module integrates the project and sshkey modules with the daemons availble at https://github.com/tizzo/Drupal.org-Git-Daemons.
 
+When a project module is created a job is created for one of the Daemons which, in turn, creates a repository at a configurable location using the projects shortname followed by '.git'.  It also provides a web service to the SSH Daemon that authenticates a user by their public keys stored in the sshkey module and allows them to access any repository that corresponds to a project for which to acting user is a maintainer over ssh, without having a user account on that system.
+
 ## Requirements:
 -   [Project Module](http://drupal.org/project/project)
 -   [SSH Keys Module](http://drupal.org/project/sshkey)
