@@ -9,6 +9,6 @@ This module integrates the project and sshkey modules with the daemons availble 
 
 ## Installation instructions
 
--   Install the module
--   Start the [Drupal Git Daemons](https://github.com/tizzo/Project-Git-Auth),
--   Profit!
+1.   Install the module
+2.   Start the [Drupal Git Daemons](https://github.com/tizzo/Project-Git-Auth)
+3.   Profit!

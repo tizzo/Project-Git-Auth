@@ -70,7 +70,6 @@ function project_git_auth_service() {
   module_load_include('inc', 'sshkey');
   if ($_GET['fingerprint']) {
     $fingerprint = urldecode($_GET['fingerprint']);
-    watchdog('vcgit', $fingerprint);
     try {
       $fingerprint = str_replace(':', '', $fingerprint);
       $loaded_key = sshkey_public_key_load($fingerprint);
