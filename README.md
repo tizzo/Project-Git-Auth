@@ -12,5 +12,6 @@ When a project module is created a job is created for one of the Daemons which, 
 ## Installation instructions
 
 1.   Install the module
-2.   Start the [Drupal Git Daemons](https://github.com/tizzo/Drupal.org-Git-Daemons)
-3.   Profit!
+2.   Clone the [Pheanstalk](https://github.com/pda/pheanstalk) into this module's directory: `git clone https://github.com/pda/pheanstalk``
+3.   Start the [Drupal Git Daemons](https://github.com/tizzo/Drupal.org-Git-Daemons)
+4.   Profit!
