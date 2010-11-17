@@ -64,17 +64,7 @@ function project_git_auth_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
   }
 }
 
-/** 
- * The menu callback for the authenticator service.
- */
-function project_git_auth_service() {
-  module_load_include('inc', 'sshkey');
-  if ($_GET['fingerprint']) {
-    $fingerprint = urldecode($_GET['fingerprint']);
-    try {
-      $fingerprint = str_replace(':', '', $fingerprint);
-      $loaded_key = sshkey_public_key_load($fingerprint);
-      $uid = $loaded_key['uid'];
+function project_git_auth_get_repos($uid) {
       $sql = "SELECT uri FROM {project_projects} pp
               JOIN {project_maintainer} pm ON pp.nid = pm.nid
               WHERE pm.uid=%d";
@@ -83,6 +73,41 @@ function project_git_auth_service() {
       while ($project = db_result($result)) {
         $repositories[] = $project;
       }
+      return $repositories;
+}
+
+/** 
+ * The menu callback for the authenticator service.
+ */
+function project_git_auth_service() {
+  module_load_include('inc', 'sshkey');
+  if ($_GET['user']) {
+    $username = urldecode($_GET['user']);
+    try {
+      $account = user_load(array('name' => check_plain($username)));
+      $uid = $account->uid;
+      $password = $account->pass;
+      $keys = sshkey_user_public_keys_list($uid);
+      foreach ($keys as &$key) {
+	$key = $key["fingerprint"];
+      }
+      $repos = project_git_auth_get_repos($uid);
+      $data = array("keys" => $keys, "password" => $password, "repos" => $repos);
+    }
+    catch(Exception $e) {
+      $uid = 0;
+      $data = array("keys" => array(), "password" => "", "repos" => array());
+    }
+    drupal_alter('project_git_auth_user_data', $data, $uid);
+    drupal_json($data);
+  }
+  if ($_GET['fingerprint']) {
+    $fingerprint = urldecode($_GET['fingerprint']);
+    try {
+      $fingerprint = str_replace(':', '', $fingerprint);
+      $loaded_key = sshkey_public_key_load($fingerprint);
+      $uid = $loaded_key['uid'];
+      $repositories = project_git_auth_get_repos($uid);
     }
     catch(Exception $e) {
       $repositories = array();
