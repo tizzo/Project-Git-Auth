@@ -56,7 +56,6 @@ function project_git_auth_settings_form() {
  */
 function project_git_auth_perm() {
   return array(
-    'create ssh keys',
     'view projects of maintainer',
   );
 }
@@ -71,41 +70,78 @@ function project_git_auth_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       case 'insert':
       case 'delete':
 
-        // Register Pheanstalk class loader
-        require_once($path);
-        drupal_set_message(t('Your git repository has been queued for creation and should be available almost immediately.'));
-
-        // TODO: if we were actually going to use this we'd need to make beanstalksd's location configurable.
-        $pheanstalk = new Pheanstalk('127.0.0.1', 11300);
-
         // Create the job for our python daemon.
         $data = array(
           'project' => $node->project['uri'],
         );
+        $repo_root = variable_get('project_git_auth_repository_base_path', '/git') . '/' . $node->project['uri'] . '.git';
         if ($op == 'insert') {
+          if (module_exists('versioncontrol_git')) {
+            // Setup the repository data.
+            $data['name'] = $node->title;
+            $data['vcs'] = 'git';
+            $data['backend'] = 'VersionControlGitBackend';
+            $data['root'] = $repo_root;
+
+            // Create and save versioncontrol entity
+            $repository = new VersioncontrolGitRepository();
+            $repository->build($data);
+            $repository->insert();
+          }
+          drupal_set_message(t('Your git repository (%repo) has been queued for creation and should be available almost immediately.', array('%repo' => $node->project['uri'] . '.git')));
           $data['operation'] = 'create';
         }
         elseif ($op == 'delete') {
+          drupal_set_message(t('Your git repository (%repo) will be deleted.', array('%repo' => $node->project['uri'] . '.git')));
           $data['operation'] = 'delete';
+          if (module_exists('versioncontrol_git')) {
+            // TODO: Is there a better way to find a repository?
+            // Do we want to relate repositories to projects in a more robust way than by magical formula around uri?
+            $data['repo_id'] = db_result(db_query("SELECT repo_id from {versioncontrol_repositories} WHERE root='%s'", $repo_root));
+            $repository = new VersioncontrolGitRepository();
+            $repository->build($data);
+            $repository->delete();
+          }
         }
-        $pheanstalk
-          ->put(json_encode($data));
         break;
-
     } 
   }
 }
 
+/**
+ * Create a job in the Beanstalkd job.
+ *
+ * @param $data
+ *   An associative array to be encoded into json data and added to the beanstalkd job queue.
+ */
+function project_git_auth_create_reposiotry_job($data) {
+  // Register Pheanstalk class loader
+  require_once(drupal_get_path('module', 'project_git_auth') . '/pheanstalk/pheanstalk_init.php');
+  // TODO: if we were actually going to use this we'd need to make beanstalksd's location configurable.
+  $pheanstalk = new Pheanstalk(variable_get('project_git_auth_beanstalk_url', '127.0.0.1'), variable_get('project_git_auth_beanstalk_port', '11300'));
+  $pheanstalk
+    ->put(json_encode($data));
+}
+
+/**
+ * Return a list of the repositories a user has access to.
+ *
+ * @param $uid
+ *   The {user}.uid to retrieve repositories for.
+ *
+ * @return
+ *   A linear array of repository names (currently just project short names).
+ */
 function project_git_auth_get_repos($uid) {
-      $sql = "SELECT uri FROM {project_projects} pp
-              JOIN {project_maintainer} pm ON pp.nid = pm.nid
-              WHERE pm.uid=%d";
-      $result = db_query($sql, $uid);
-      $repositories = array();
-      while ($project = db_result($result)) {
-        $repositories[] = $project;
-      }
-      return $repositories;
+  $sql = "SELECT uri FROM {project_projects} pp
+          JOIN {project_maintainer} pm ON pp.nid = pm.nid
+          WHERE pm.uid=%d";
+  $result = db_query($sql, $uid);
+  $repositories = array();
+  while ($project = db_result($result)) {
+    $repositories[] = $project;
+  }
+  return $repositories;
 }
 
 /** 
@@ -121,7 +157,7 @@ function project_git_auth_service() {
       $password = $account->pass;
       $keys = sshkey_user_public_keys_list($uid);
       foreach ($keys as &$key) {
-	$key = $key["fingerprint"];
+        $key = $key["fingerprint"];
       }
       $repos = project_git_auth_get_repos($uid);
       $data = array("keys" => $keys, "password" => $password, "repos" => $repos);
