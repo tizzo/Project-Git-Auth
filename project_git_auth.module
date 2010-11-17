@@ -16,7 +16,39 @@ function project_git_auth_menu() {
     'page callback' => 'project_git_auth_service',
     'access arguments' => array('view projects of maintainer'),
   );
+  $items['admin/settings/project-git-auth'] = array(
+    'page title' => 'Git Reposiotry Manager Configuration',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('project_git_auth_settings_form'),
+    'access arguments' => array('administer site configuration'),
+  );
   return $items;
+}
+
+
+/**
+ * Provide the settings form.
+ */
+function project_git_auth_settings_form() {
+  $form['project_git_auth_beanstalk_url'] = array(
+    '#title' => t('Beanstalkd URL'),
+    '#type' => 'textfield',
+    '#description' => t('The URL (or IP address) of your Beanstalkd Daemon used to queue repository actions.'),
+    '#default_value' => variable_get('project_git_auth_beanstalk_url', '127.0.0.1'),
+  );
+  $form['project_git_auth_beanstalk_port'] = array(
+    '#title' => t('Beanstalkd Port'),
+    '#type' => 'textfield',
+    '#description' => t('The port number on which your Beanstalkd Daemon is listening.'),
+    '#default_value' => variable_get('project_git_auth_beanstalk_port', '11300'),
+  );
+  $form['project_git_auth_repository_base_path'] = array(
+    '#title' => t('Base Repository Path'),
+    '#type' => 'textfield',
+    '#description' => t('The path on disk where this repository resides.'),
+    '#default_value' => variable_get('project_git_auth_repository_base_path', '/git'),
+  );
+  return system_settings_form($form);
 }
 
 /**
