@@ -104,7 +104,7 @@ function project_git_auth_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
           }
         }
         break;
-    } 
+    }
   }
 }
 
@@ -144,11 +144,12 @@ function project_git_auth_get_repos($uid) {
   return $repositories;
 }
 
-/** 
+/**
  * The menu callback for the authenticator service.
  */
 function project_git_auth_service() {
   module_load_include('inc', 'sshkey');
+  // We use the HTTP GET request method for caching reasons.
   if ($_GET['user']) {
     $username = urldecode($_GET['user']);
     try {
@@ -162,14 +163,14 @@ function project_git_auth_service() {
       $repos = project_git_auth_get_repos($uid);
       $data = array("keys" => $keys, "password" => $password, "repos" => $repos);
     }
-    catch(Exception $e) {
+    catch (Exception $e) {
       $uid = 0;
       $data = array("keys" => array(), "password" => "", "repos" => array());
     }
     drupal_alter('project_git_auth_user_data', $data, $uid);
     drupal_json($data);
   }
-  if ($_GET['fingerprint']) {
+  elseif ($_GET['fingerprint']) {
     $fingerprint = urldecode($_GET['fingerprint']);
     try {
       $fingerprint = str_replace(':', '', $fingerprint);
@@ -177,12 +178,11 @@ function project_git_auth_service() {
       $uid = $loaded_key['uid'];
       $repositories = project_git_auth_get_repos($uid);
     }
-    catch(Exception $e) {
+    catch (Exception $e) {
       $repositories = array();
       $uid = 0;
     }
     drupal_alter('project_git_auth_user_repositories', $repositories, $uid);
     drupal_json($repositories);
-    return NULL;
   }
-} 
+}
