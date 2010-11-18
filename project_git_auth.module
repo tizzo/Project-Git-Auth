@@ -103,6 +103,7 @@ function project_git_auth_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
             $repository->delete();
           }
         }
+        project_git_auth_create_reposiotry_job($data);
         break;
     } 
   }
